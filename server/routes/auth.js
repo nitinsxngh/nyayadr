@@ -7,6 +7,10 @@ router.post('/login', (req, res) => {
   const { accessKey } = req.body;
   const expected = process.env.PORTAL_ACCESS_KEY;
 
+  if (!process.env.JWT_SECRET) {
+    return res.status(500).json({ error: 'JWT_SECRET is not configured on the server' });
+  }
+
   if (!expected) {
     return res.status(500).json({ error: 'Portal access key is not configured on the server' });
   }
