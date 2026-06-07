@@ -1,4 +1,4 @@
-import { getAuthToken } from './apiService';
+import { getAuthToken, getApiBase } from './apiService';
 
 let cachedStatus = null;
 
@@ -9,7 +9,7 @@ export const fetchAIStatus = async () => {
     return cachedStatus;
   }
   try {
-    const res = await fetch('/api/ai/status', {
+    const res = await fetch(`${getApiBase()}/ai/status`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     cachedStatus = await res.json();
@@ -69,7 +69,7 @@ export const generateSettlementReport = async (
     throw new Error('Not authenticated. Please log in again.');
   }
 
-  const res = await fetch('/api/ai/report', {
+  const res = await fetch(`${getApiBase()}/ai/report`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,

@@ -1,4 +1,7 @@
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -8,7 +11,10 @@ import aiRoutes from './routes/ai.js';
 import { hasAnyAI, hasGemini, hasOpenAI } from './services/aiKeys.js';
 import { ensureBucketExists, getBucketName, isS3Configured } from './services/s3.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DIST_PATH = path.join(__dirname, '..', 'dist');
 const PORT = process.env.PORT || 3001;
+const isProduction = process.env.NODE_ENV === 'production';
 
 if (!process.env.JWT_SECRET) {
   console.error('JWT_SECRET is required in .env');
@@ -47,6 +53,28 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/ai', aiRoutes);
+
+/** Serve built React app + SPA fallback (fixes /login 404 on live server) */
+function setupStaticFrontend() {
+  const indexHtml = path.join(DIST_PATH, 'index.html');
+  if (!fs.existsSync(indexHtml)) {
+    if (isProduction) {
+      console.error('Production requires dist/. Run: npm run build');
+      process.exit(1);
+    }
+    console.warn('dist/ not found — UI only available via Vite dev server (npm run dev:client)');
+    return;
+  }
+
+  app.use(express.static(DIST_PATH));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(indexHtml);
+  });
+
+  console.log(`Serving frontend from ${DIST_PATH}`);
+}
 
 async function start() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/nyayadr';
@@ -91,8 +119,14 @@ async function start() {
     console.warn('No AI keys configured — set GEMINI_API_KEY and/or OPENAI_API_KEY in .env');
   }
 
+  setupStaticFrontend();
+
   const server = app.listen(PORT, () => {
-    console.log(`API server running on http://localhost:${PORT}`);
+    console.log(
+      isProduction
+        ? `NyayADR running on http://localhost:${PORT}`
+        : `API server running on http://localhost:${PORT}`
+    );
   });
 
   server.on('error', (err) => {

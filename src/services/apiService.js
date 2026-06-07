@@ -1,4 +1,8 @@
-const API_BASE = '/api';
+export const getApiBase = () => {
+  const base = import.meta.env.VITE_API_URL || '/api';
+  return base.replace(/\/$/, '');
+};
+
 const TOKEN_KEY = 'nyay_portal_token';
 
 export const getAuthToken = () => sessionStorage.getItem(TOKEN_KEY);
@@ -15,7 +19,7 @@ async function apiFetch(path, options = {}) {
   const token = getAuthToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
@@ -67,7 +71,7 @@ export const updateConversation = async (conversationId, payload) => {
 
 export const uploadPartyAudio = async (conversationId, formData) => {
   const token = getAuthToken();
-  const res = await fetch(`${API_BASE}/conversations/${conversationId}/audio`, {
+  const res = await fetch(`${getApiBase()}/conversations/${conversationId}/audio`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
